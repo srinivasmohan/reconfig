@@ -19,7 +19,7 @@ module Reconfig
     option :help, :short =>'-h', :long => '--help', :boolean => true, :default => false, :description => "Show this Help message.", :show_options => true, :exit => 0
     option :host, :long => "--host ETCDHOST", :default => "127.0.0.1", :description => "Etcd host to connect to. Default: 127.0.0.1"
     option :port, :long => "--port PORT", :default => 4001, :description => "Etc port. Default: 4001"
-    option :prefix, :short => "-p someprefix", :long => "--prefix someprefix", :default => nil, :description => "Key prefix to use. Must begin with /. Default: empty"
+    option :prefix, :short => "-p someprefix", :long => "--prefix someprefix", :default => nil, :description => "Key prefix to use. Must begin with '/'. Default: empty"
     option :debug, :short => "-d", :long => "--debug", :boolean => true, :default => false, :description => "Enable debug mode."
     option :onetime, :short => "-o", :long => "--onetime", :boolean => true, :default => false, :description => "Run onetime and exit"
     option :notreally, :short => "-n", :long => "--notreally", :boolean => true, :default => false, :description => "Display changes but do not modify target files. Default: false" 
@@ -29,11 +29,13 @@ module Reconfig
     option :ssl_key, :long => "--ssl_key PATH-TO-SSL-KEY", :default => nil, :description => "Path to SSL Key"
     option :ssl_passphrase, :long => "--ssl_passphrase Passphrase", :default => nil, :description => "Passphrase if SSL Key is encrypted"
     option :cfgdir , :short => "-c CFGDIR", :long => "--cfgdir CFGDIR", :default => CfgDir, :description => "Toplevel config dir. Defaults to #{CfgDir}"
+    option :srv, :long => "--srv SRV-RECORD", :default => nil, :description => "Use DNS SRV record to locate the etcd host/port. If specified, overrides host/port"
+    option :version, :long => "--version", :boolean => true, :default => false, :description => "Display version and exit."
  end
 
   class Config
 
-    attr_reader :cfgdir, :configs, :confdir, :templatedir
+    attr_reader :cfgdir, :configs, :confdir, :templatedir, :client
     attr_accessor :debug
 
     def initialize(opts={})
@@ -59,6 +61,24 @@ module Reconfig
       else
         logmsg("No valid configs to work with!")
       end
+      #If provided a DNS SRV record, then use that to locate a valid host:port combo for etcd.
+      if !opts[:srv].nil?
+        opts[:host], opts[:port] = getHostInfo(opts[:srv])
+        if opts[:host].nil? || opts[:port].nil?
+          abort "Could not locate ETCD host/port from SRV record #{opts[:srv]}!"
+        end
+        logmsg("Will use etcd on #{opts[:host]}:#{opts[:port]} in #{opts[:ssl] ? "SSL": "HTTP"} mode (from SRV record)") if @debug
+        opts[:port]=opts[:port].to_i
+      end
+      @client=nil
+			@connectparams={ :host => opts[:host], :port => opts[:port].to_i }
+      @connectparams.merge!({
+        :use_ssl => opts[:ssl],
+        :ca_file => opts[:ssl_cafile],
+        :ssl_cert => opts[:ssl_cert],
+        :ssl_key => opts[:ssl_key],
+        :passphrase => opts[:ssl_passphrase]
+      }) if opts[:ssl]
     end
 
     def checkdirs(dirs=Array.new)
@@ -117,5 +137,35 @@ module Reconfig
       Dir.glob("#{@confdir}/*.json").sort.map { |f| File.expand_path(f)}
     end
 
-  end
-end
+    #Given a SRV type record, locate the host:port combination (pick one of many)
+    def getHostInfo(srvname=nil)
+      return [nil,nil] if srvname.nil? || srvname.empty?
+      resolver=Resolv::DNS.new
+      all=resolver.getresources(srvname,Resolv::DNS::Resource::IN::SRV)
+      return [nil,nil] if all.length==0
+      rec=all[(rand(all.length)+1).to_i-1]
+      return [ rec.target.to_s, rec.port ]
+    end
+
+    #Connect to etcd
+    def connect
+      if @connectparams[:use_ssl]
+        #cafile/cert/key is provided MUST exist.
+        pp=@connectparams[:passphrase]; @connectparams.delete(:passphrase)
+       	@client=Etcd.client host: @connectparams[:host], port: @connectparams[:port] do |clt|
+          clt.use_ssl = true
+          clt.ca_file = @connectparams[:ca_file]
+          clt.ssl_cert = @connectparams[:ssl_cert].nil? ? nil: OpenSSL::X509::Certificate.new(File.read(@connectparams[:ssl_cert])) 
+          clt.ssl_key = @connectparams[:ssl_key].nil? ? nil: OpenSSL::PKey::RSA.new(File.read(@connectparams[:ssl_key]), pp) 
+        end 
+
+      else
+       @client=Etcd.client(@connectparams)
+      end
+      #This will fail if ssl config / host is not accessible. INtentioonal.   
+    	logmsg("Connect to ETCD #{@client.version} with leader #{@client.leader}")
+    end
+
+  end #end of Config class
+
+end #end of module
