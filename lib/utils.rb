@@ -6,8 +6,7 @@ require "json"
 
 module Reconfig
   Timeformat='%Y%m%d.%H:%M:%S'
-  CfgDir=ENV['CFGDIR'] || "/etc/reconfig"
- 
+  CfgDir="/etc/reconfig" 
   module Utils  
     def logmsg(msg=nil)
       $stderr.puts "#{Time.now.strftime(Timeformat)} [PID #{$$.to_i}] - #{msg}" unless msg.nil?
@@ -15,13 +14,30 @@ module Reconfig
 
   end
 
+  class Options
+    include Mixlib::CLI
+    option :help, :short =>'-h', :long => '--help', :boolean => true, :default => false, :description => "Show this Help message.", :show_options => true, :exit => 0
+    option :host, :long => "--host ETCDHOST", :default => "127.0.0.1", :description => "Etcd host to connect to. Default: 127.0.0.1"
+    option :port, :long => "--port PORT", :default => 4001, :description => "Etc port. Default: 4001"
+    option :prefix, :short => "-p someprefix", :long => "--prefix someprefix", :default => nil, :description => "Key prefix to use. Must begin with /. Default: empty"
+    option :debug, :short => "-d", :long => "--debug", :boolean => true, :default => false, :description => "Enable debug mode."
+    option :onetime, :short => "-o", :long => "--onetime", :boolean => true, :default => false, :description => "Run onetime and exit"
+    option :notreally, :short => "-n", :long => "--notreally", :boolean => true, :default => false, :description => "Display changes but do not modify target files. Default: false" 
+    option :ssl, :short =>"-s", :long => "--ssl", :boolean => true, :default => false, :description => "Use SSL mode"
+    option :ssl_cafile, :long => "--ssl_cafile PATH-TO-CA-FILE", :default => nil, :description => "Path to SSL CA (cert auth) file"
+    option :ssl_cert , :long => "--ssl_cert PATH-TO-SSL-CERT", :default => nil, :description => "Path to SSL cert"
+    option :ssl_key, :long => "--ssl_key PATH-TO-SSL-KEY", :default => nil, :description => "Path to SSL Key"
+    option :ssl_passphrase, :long => "--ssl_passphrase Passphrase", :default => nil, :description => "Passphrase if SSL Key is encrypted"
+    option :cfgdir , :short => "-c CFGDIR", :long => "--cfgdir CFGDIR", :default => CfgDir, :description => "Toplevel config dir. Defaults to #{CfgDir}"
+ end
+
   class Config
 
     attr_reader :cfgdir, :configs, :confdir, :templatedir
     attr_accessor :debug
 
     def initialize(opts={})
-			@cfgdir=CfgDir
+			@cfgdir=opts[:cfgdir]
 			@debug=opts[:debug] ? opts[:debug] : false
       @confdir=@cfgdir +"/conf.d"
       @templatedir=@cfgdir+"/templates"
@@ -36,10 +52,13 @@ module Reconfig
        	logmsg("Could not process #{thiscfg} - #{c[:err]}") if c[:err]
         @configs << c[:obj] if c[:obj]
       end
-     	puts "Before: "+JSON.pretty_generate(@configs)
       @configs=validatecfg(@configs)
-      puts "After: "+JSON.pretty_generate(@configs)
-      logmsg("No valid configs to work with!") unless @configs.length> 0
+      puts "After: "+JSON.pretty_generate(@configs) if @debug
+      if @configs.length>0
+        logmsg("Targeting config files: "+@targets.keys.sort.join(" "))
+      else
+        logmsg("No valid configs to work with!")
+      end
     end
 
     def checkdirs(dirs=Array.new)
@@ -86,6 +105,11 @@ module Reconfig
       %w{source target key}.each {|x| return false unless h.has_key?(x)}
       return false unless File.exists?(@templatedir+"/"+h["source"])
       return false unless h["key"]=~/^\//
+			if @targets.has_key?(h["target"])
+				logmsg("Ignoring #{h["id"]} since it REPEATS target config #{h["target"]}")
+				return false
+			end
+			@targets[h["target"]]=h["id"]
       return true 
     end
 
