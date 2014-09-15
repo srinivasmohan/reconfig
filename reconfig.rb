@@ -19,5 +19,5 @@ end
 unless cli.config[:prefix].nil?
   abort "Key prefix must begin with a /" unless cli.config[:prefix]=~/^\//
 end
-cfg=Reconfig::Config.new(cli.config)
-cfg.connect
+recfg=Reconfig::Config.new(cli.config)
+recfg.connect

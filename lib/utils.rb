@@ -115,6 +115,7 @@ module Reconfig
           next
         end 
         t["key"]=@prefix+t["key"] unless @prefix.nil?
+				logmsg("Target #{t["target"]} bound to template:#{t["source"]}, key #{t["key"]}") if @debug
         cfgnew << t            
       end
       cfgnew
@@ -162,8 +163,15 @@ module Reconfig
       else
        @client=Etcd.client(@connectparams)
       end
-      #This will fail if ssl config / host is not accessible. INtentioonal.   
-    	logmsg("Connect to ETCD #{@client.version} with leader #{@client.leader}")
+      begin
+			  v=@client.version
+        ldr=@client.leader
+        logmsg("Connected to ETCD #{v} (Leader #{ldr}) successfully.")
+      rescue Exception => e
+        logmsg("Connection error #{@connectparams[:host]}:#{@connectparams[:port]}: #{e.inspect}")
+        abort "Could not connect to ETCD #{@connectparams[:host]}:#{@connectparams[:port]}!"
+      end
+    	
     end
 
   end #end of Config class
