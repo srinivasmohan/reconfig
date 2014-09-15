@@ -1,0 +1,22 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    etcd (0.2.4)
+      mixlib-log
+    json (1.8.1)
+    macaddr (1.7.1)
+      systemu (~> 2.6.2)
+    mixlib-cli (1.5.0)
+    mixlib-log (1.6.0)
+    systemu (2.6.4)
+    uuid (2.3.7)
+      macaddr (~> 1.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  etcd
+  json
+  mixlib-cli
+  uuid
