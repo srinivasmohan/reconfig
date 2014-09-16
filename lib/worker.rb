@@ -19,7 +19,7 @@ module Reconfig
         @opts[x]=opts.has_key?(x) && opts[x] ? true: false
       end
       @key=opts["key"]
-      @ckey=opts["id"] + "(Key: #{@key})"
+      @ckey=opts["id"] + " [Key #{@key}]"
       @client=opts["client"] 
       @debug=opts["debug"] 
     end
@@ -49,7 +49,7 @@ module Reconfig
 
     #Hmmm... If we are watching an etcd dir recursively, how can we get back a list of keys/values without having to fetch it?
     def run
-      logmsg("#{@ckey} - Watching #{@key} (#{ @opts["recursive"] ? "Recursive(Tree)": "SingleKey(Leaf)" })")
+      logmsg("#{@ckey} - [#{ @opts["recursive"] ? "Recursive/Tree": "SingleKey/Leaf" }]")
       loop do 
         begin
           val=nil
@@ -60,8 +60,9 @@ module Reconfig
           else
             val=find(@key,@opts["recursive"])
           end
-          logmsg("Key #{@key} contains #{val}")
-          #renderer=Reconfig::Render.new(@src, @tgt, val)
+          logmsg("Key #{@key} contains #{val}") if @debug
+          renderer=Reconfig::Render.new(@opts.dup, val)
+          logmsg("#{@ckey} - Updating #{@opts["target"]} - #{renderer.process}")
         rescue Exception => e
           logmsg("#{@ckey} - Connectivity error to #{@host}:#{@port} - #{e.inspect}")
           sleep 15
