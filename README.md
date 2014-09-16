@@ -67,6 +67,73 @@ The options and their purposes should be (sorta) self descriptive :-)
 If you supply any of the `--sslxxx` params, the supplied files MUST exist.
 (These allow you to connect to an etcd cluster over SSL - assuming the cluster was setup for it).
 
+## Etcd-util.rb ##
+
+You could use curl to add/update/delete etcd keys - See [Etcd](https://github.com/coreos/etcd) for details. Or you could use -
+
+```
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -h
+Usage: ./etcd-util.rb (options)
+    -d, --debug                      Debug mode
+    -h, --help                       Show this Help message.
+        --host HOST                  Etcd host to connect to
+    -k, --key KEY                    Key to work on. Required!
+    -o, --operation OPERATION        Can be GET/SET/DEL - Defaults to GET
+        --port PORT                  Etcd port
+    -r, --recursive                  Recursive mode. False by default. Matters for DEL
+        --srv SRV-RECORD             Use DNS SRV record to locate the etcd host/port. If specified, overrides host/port
+    -s, --ssl                        Use SSL mode
+        --ssl_cafile PATH-TO-CA-FILE Path to SSL CA (cert auth) file
+        --ssl_cert PATH-TO-SSL-CERT  Path to SSL cert
+        --ssl_key PATH-TO-SSL-KEY    Path to SSL Key
+        --ssl_passphrase Passphrase  Passphrase if SSL Key is encrypted
+    -t, --ttl TTL                    TTL in seconds. Matters only for SET
+    -v, --value VAL                  Value for the key. Required on SET
+        --version                    Connect to etcd and dump version/leader info etc
+```
+
+Usage is pretty simple.
+```
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /
+[
+  "/abc",
+  "/test1"
+]
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc
+[
+  "/abc/test1",
+  "/abc/test2"
+]
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k / -r
+Running recursive find - May take a few secs...
+{
+  "/abc/test1/123": "hello",
+  "/abc/test1/456": "hello",
+  "/abc/test1/789": "hello",
+  "/abc/test1/999": "hello998",
+  "/abc/test2": "hello",
+  "/test1/123": "hello",
+  "/test1/456": "helloworld",
+  "/test1/999": "helloworld"
+}
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc/test2
+{
+  "/abc/test2": "hello"
+}
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc/missing
+Etcd::KeyNotFound /abc/missing
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc/missing -v not-missing -o set
+Setting /abc/missing to not-missing
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc/missing
+{
+  "/abc/missing": "not-missing"
+}
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc/missing -o del
+root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc/missing
+Etcd::KeyNotFound /abc/missing
+```
+
+
 ## Setup ##
 
 `Reconfig` has no "global" config except for command line params from above. 
