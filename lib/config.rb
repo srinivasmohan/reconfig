@@ -47,6 +47,7 @@ module Reconfig
 			abort "Missing config dirs #{dirs.join(" ")}" unless checkdirs(dirs)
       @configs=Hash.new
       @targets=Hash.new
+      @notreally=opts[:notreally] ? true : false
       cfgs=[]
       locatecfgs.each do |thiscfg|
         c=parsecfg(thiscfg)
@@ -130,8 +131,9 @@ module Reconfig
       h["recursive"]=h.has_key?("recursive") && h["recursive"] ? true : false
       h["checkcmd"]=h.has_key?("checkcmd") ? h["checkcmd"] : nil
       h["reloadcmd"]=h.has_key?("reloadcmd") ? h["reloadcmd"] : nil
+      h["notreally"]=@notreally if @notreally
       @configs[ h["key"] ] = h
-			@targets[h["target"]]=h["id"]
+      @targets[h["target"]]=h["id"]
       desc=h["recursive"] ? "TREE" : "LEAF"
       logmsg("TargetConfig #{h["target"]} bound to Key:#{h["key"]} (#{desc}) Template:#{h["source"]}") if @debug
       return true 
