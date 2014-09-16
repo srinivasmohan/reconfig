@@ -12,9 +12,10 @@ module Reconfig
     def initialize(opts=Hash.new)
       @opts=Hash.new
       #$stderr.puts "INIT: "+JSON.pretty_generate(opts)
-			%w{key id source target reloadcmd checkcmd client}.each do |x|
+			%w{splay key id source target reloadcmd checkcmd client pattern}.each do |x|
         @opts[x]=opts[x]
       end
+      @opts["splay"]=@opts.has_key?("splay") ? @opts["splay"].to_i : rand(10)+1 #Time to wait before reloading svc.
       %w{recursive debug notreally onetime}.each do |x|
         @opts[x]=opts.has_key?(x) && opts[x] ? true: false
       end
