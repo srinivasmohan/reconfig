@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    erubis (2.7.0)
     etcd (0.2.4)
       mixlib-log
     eventmachine (1.0.3)
@@ -17,6 +18,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  erubis
   etcd
   eventmachine
   json

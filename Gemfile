@@ -5,4 +5,4 @@ gem 'uuid'
 gem 'etcd'
 gem 'mixlib-cli'
 gem 'eventmachine'
-
+gem 'erubis'
