@@ -9,7 +9,7 @@ module Reconfig
     include EM::Deferrable
 
     def initialize(opts=Hash.new)
-      $stderr.puts "INIT: "+JSON.pretty_generate(opts)
+      #$stderr.puts "INIT: "+JSON.pretty_generate(opts)
       @key=opts["key"]
       @id=opts["id"]
       @ckey=opts["id"] + "(Key: #{@key})"
@@ -20,7 +20,8 @@ module Reconfig
       @check=opts["checkcmd"] 
       @client=opts["client"] 
       @debug=opts["debug"] 
-      @nr=opts.has_key?("notreally") && opts["notreally"] ? true : false   
+      @nr=opts.has_key?("notreally") && opts["notreally"] ? true : false 
+      @onetime=opts.has_key?("onetime") && opts["onetime"] ? true : false  
     end
 
     def debug!
@@ -33,7 +34,6 @@ module Reconfig
       obj=@client.get(key,recursive: mode)
       if obj.node.dir
         childkeys=obj.children.map {|x| x.key }
-        p childkeys
         if !mode
           return childkeys
         else
@@ -53,13 +53,20 @@ module Reconfig
       logmsg("#{@ckey} - Watching #{@key} (#{modedesc})- Change #{@tgt} using #{@src}")
       loop do 
         begin
-       	  obj=@client.watch(@key, recursive: @mode)
-          val=find(@key,@mode)
-          logmsg("Key #{@key} changed (Mode=#{modedesc}) => #{val}")
+          val=nil
+          if !@onetime
+       	    obj=@client.watch(@key, recursive: @mode)
+            logmsg("Key #{@key} changed #{obj}")
+            val=find(@key,@mode)
+          else
+            val=find(@key,@mode) 
+          end
+          logmsg("Key #{@key} contains #{val}")
         rescue Exception => e
           logmsg("#{@ckey} - Connectivity error to #{@host}:#{@port} - #{e.inspect}")
           sleep 30
         end 
+        break if @onetime
       end    
     end
   end #end of Worker
