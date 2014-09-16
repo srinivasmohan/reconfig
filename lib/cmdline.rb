@@ -10,7 +10,7 @@ module Reconfig
   module Cmdline
     class EtcdUtilOpts
       include Mixlib::CLI
-      option :op, :short => "-o OPERATION", :long => "--operation OPERATION", :default => "GET", :description => "Can be GET/SET/DEL - Defaults to GET"
+      option :op, :short => "-o OPERATION", :long => "--operation OPERATION", :default => "GET", :description => "Can be GET/SET/DEL/WATCH - Defaults to GET"
       option :key, :short => "-k KEY", :long => "--key KEY", :default => nil, :description => "Key to work on. Required!"
       option :ttl, :short => "-t TTL", :long => "--ttl TTL", :default => nil, :description => "TTL in seconds. Matters only for SET"
       option :value, :short => "-v VAL",:long => "--value VAL", :description => "Value for the key. Required on SET"

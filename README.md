@@ -67,7 +67,22 @@ The options and their purposes should be (sorta) self descriptive :-)
 If you supply any of the `--sslxxx` params, the supplied files MUST exist.
 (These allow you to connect to an etcd cluster over SSL - assuming the cluster was setup for it).
 
-## Etcd-util.rb ##
+### Using DNS SRV records ###
+
+If you have `SRV` type record containing the hosts/ports of your etcd instances, e.g.
+
+```
+[smohan@Srinivasans-MacBook-Pro-3 tmp]$ host -t SRV _etcd._tcp.servdisc.somedomain.io
+_etcd._tcp.servdisc.somedomain.io has SRV record 10 20 4001 etcd1.somedomain.io.
+_etcd._tcp.servdisc.somedomain.io has SRV record 10 20 4001 etcd2.somedomain.io.
+_etcd._tcp.servdisc.somedomain.io has SRV record 10 20 4001 etcd3.somedomain.io.
+_etcd._tcp.servdisc.somedomain.io has SRV record 10 20 4001 etcd4.somedomain.io.
+_etcd._tcp.servdisc.somedomain.io has SRV record 10 20 4001 etcd5.somedomain.io.
+```
+
+Then you can use `--srv _etcd._tcp.servdisc.somedomain.io` instead of having to pass `--host` & `--port` to `reconfig.rb`/`etcd-util.rb`. The resolver will pick a random one of many hosts to connect to (without looking at prio/weights for now).
+
+## etcd-util.rb ##
 
 You could use curl to add/update/delete etcd keys - See [Etcd](https://github.com/coreos/etcd) for details. Or you could use -
 
@@ -78,7 +93,7 @@ Usage: ./etcd-util.rb (options)
     -h, --help                       Show this Help message.
         --host HOST                  Etcd host to connect to
     -k, --key KEY                    Key to work on. Required!
-    -o, --operation OPERATION        Can be GET/SET/DEL - Defaults to GET
+    -o, --operation OPERATION        Can be GET/SET/DEL/WATCH - Defaults to GET
         --port PORT                  Etcd port
     -r, --recursive                  Recursive mode. False by default. Matters for DEL
         --srv SRV-RECORD             Use DNS SRV record to locate the etcd host/port. If specified, overrides host/port
