@@ -143,23 +143,13 @@ module Reconfig
       Dir.glob("#{@confdir}/*.json").sort.map { |f| File.expand_path(f)}
     end
 
-    #Given a SRV type record, locate the host:port combination (pick one of many)
-    def getHostInfo
-      return [nil,nil] if @srv.nil?
-      resolver=Resolv::DNS.new
-      all=resolver.getresources(srvname,Resolv::DNS::Resource::IN::SRV)
-      return [nil,nil] if all.length==0
-      rec=all[(rand(all.length)+1).to_i-1]
-      return [ rec.target.to_s, rec.port.to_i ]
-    end
-
     #Return an etcd client. Wont know if you can connect till you connect.
     def client
       client=nil
       chash={:host => @host, :port => @port }
       unless @srv.nil?
-        chash[:host], chash[:port] = getHostInfo
-        abort "Etcd host/port was null from SRV record #{@srv}!"
+        chash[:host], chash[:port] = getHostInfo(@srv)
+        abort "Etcd host/port was null from SRV record #{@srv}!" if chash[:host].nil? || chash[:port].nil?
         logmsg("Etcd host #{chash[:host]}:#{chash[:port]} from SRV #{@srv}") if @debug
       end
       chash.merge!(@connectparams)		 
