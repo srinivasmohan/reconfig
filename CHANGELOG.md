@@ -1,3 +1,9 @@
+v0.0.2
+======
+* Added `pattern` to config JSON - This allows use of alternate embedded pattern e.g. `#% %#` instead of standard `<% %>`
+* Swapped to use Erubis instead of Erb for this to happen.
+
+
 v0.0.1
 ======
 

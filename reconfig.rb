@@ -28,10 +28,14 @@ recfg=Reconfig::Config.new(cli.config)
 allthreads=[]
 recfg.configs.each_pair do |thiskey,val|
   thiswconf=val.dup
-  thisw=Reconfig::Worker.new(thiswconf.merge!({"debug" => cli.config[:debug], "client"=>recfg.client, "onetime" => true}))
+  thisw=Reconfig::Worker.new(thiswconf.merge!({
+    "debug" => cli.config[:debug],
+    "client"=>recfg.client,
+    "onetime" => true,
+  }))
   allthreads << Thread.new { thisw.run } 
 end
-allthreads.each {|t| t.join; sleep 5}
+allthreads.each {|t| t.join}
 if cli.config[:onetime]
   logmsg("Finished")
   exit 0
@@ -42,7 +46,11 @@ EM.run {
   recfg.configs.each_pair do |thiskey,val|
     logmsg("Setting up KeyWatch for #{thiskey}")
     thiswconf=val.dup
-    thisw=Reconfig::Worker.new(thiswconf.merge!({"debug" => cli.config[:debug], "client"=>recfg.client, "onetime" => cli.config[:onetime] }))
+    thisw=Reconfig::Worker.new(thiswconf.merge!({
+      "debug" => cli.config[:debug],
+      "client"=>recfg.client,
+      "onetime" => cli.config[:onetime],
+    }))
     Thread.new do 
       thisw.run
     end 

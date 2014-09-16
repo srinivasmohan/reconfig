@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require "erb"
+require "erubis" #Erubis allows change of pattern while erb does'nt. We will need alternate pattern for chef integration.
 require "json"
 require 'digest/md5'
 require 'yaml'
@@ -16,12 +16,12 @@ module Reconfig
       @reconfigdata=valhash #In the template, all references to @reconfigdata
       @opts=opts
       @debug=@opts["debug"]
+      @pattern=opts.has_key?("pattern") ? opts["pattern"] : '<% %>'
     end
 
     def process
       return false unless @opts.keys.length > 0
       newcontents=populate_template
-      #p newcontents
       return false if newcontents=='RECONFIG-ERR'
       newsum=Digest::MD5.hexdigest(newcontents)
       if newsum==origmd5
@@ -44,8 +44,8 @@ module Reconfig
 
     def populate_template
       begin
-        template=ERB.new File.new(@opts["source"]).read, nil, "%"
-     	  return template.result(binding) 
+        template=Erubis::Eruby.new(File.read(@opts["source"]), :pattern => @pattern)
+     	  return template.result(binding)
       rescue Exception => e
         logmsg("Error processing template #{@opts["source"]} - #{e.inspect} #{e.backtrace}")
         return 'RECONFIG-ERR' 

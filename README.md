@@ -51,7 +51,7 @@ Usage: ./reconfig.rb (options)
         --host ETCDHOST              Etcd host to connect to. Default: 127.0.0.1
     -n, --notreally                  Display changes but do not modify target files. Default: false
     -o, --onetime                    Run onetime and exit
-        --port PORT                  Etc port. Default: 4001
+        --port PORT                  Etcd port. Default: 4001
     -p, --prefix someprefix          Key prefix to use. Must begin with '/'. Default: empty
         --srv SRV-RECORD             Use DNS SRV record to locate the etcd host/port. If specified, overrides host/port
     -s, --ssl                        Use SSL mode

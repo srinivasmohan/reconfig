@@ -132,6 +132,7 @@ module Reconfig
       h["checkcmd"]=h.has_key?("checkcmd") ? h["checkcmd"] : nil
       h["reloadcmd"]=h.has_key?("reloadcmd") ? h["reloadcmd"] : nil
       h["notreally"]=@notreally if @notreally
+      h["pattern"]=h.has_key?("pattern") ? h["pattern"] : '<% %>'
       @configs[ h["key"] ] = h
       @targets[h["target"]]=h["id"]
       desc=h["recursive"] ? "TREE" : "LEAF"
