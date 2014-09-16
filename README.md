@@ -15,8 +15,6 @@ There are two components to this:
 1. `Etcd` - [Etcd](https://github.com/coreos/etcd) is a highly available key/value store for config and service discovery.
 2. `Reconfig` - This is a daemon thats watching specific keys on etcd and reacts when these keys change (When do keys change? Typically when you add/remove servers). Reconfig reacts to etcd "events" that are posted by your nodes coming up/going down.
 
-This is a work in progress.
-
 ## Why Reconfig and not chef/puppet/ansible/whatever ##
 
 Chef/Puppet are great for building initial system but for nodes config to converge to the "current" required state means chef-client/puppet agent wake up very frequently. I did'nt want to set ridiculously low run intervals for these. So Reconfig was built to work with Chef where Chef sets up an initial config template and Reconfig uses that to populate the actual config files the system daemons would use.
@@ -54,7 +52,9 @@ Usage: ./reconfig.rb (options)
         --version                    Display version and exit.
 ```
 
-The options and their purposes should (sorta) be self descriptive :-) If you supply any of the `--ssl_*` params, the supplied files MUST exist.
+The options and their purposes should be (sorta) self descriptive :-) 
+
+If you supply any of the `--sslxxx` params, the supplied files MUST exist.
 (These allow you to connect to an etcd cluster over SSL - assuming the cluster was setup for it).
 
 ## Setup ##
@@ -64,8 +64,10 @@ The options and their purposes should (sorta) be self descriptive :-) If you sup
 You build a json config to bind a Reconfig template and Etcd key to a target config file (that you want to rebuild each time the etcd key changes).
 
 Two ways to do it:
+
 1. The `etcd` key is a directory - And you want to pull the entire "tree" (i.e. `recursive=true`)
 2. The `etcd` key being watched is a "file" - You just want its value.
+
 
 Folder [./cfgtest/conf.d](cfgtest/conf.d) has a couple of sample JSON configs.
 
@@ -94,4 +96,19 @@ KEY <%= x %> has VALUE <%= @reconfigdata[x] %>
 ```
 
 `@reconfigdata` will always be a Hash.
+
+## Certain "design" assumptions ##
+
+1. The same target config file cannot be monitored under multiple etcd keys.
+2. The same etcd key cannot be monitored for multiple targets.
+
+Basically - You cannot have a duplicate `key` or a `target` on a given system. That work for me now - Open to changing that if theres a need for it. Wanted to keep it simple for starters...
+
+## TODO ##
+
+1. Implement the `checkcmd` and `reloadcmd` functionality.
+2. Investigate if we can somehow watch many keys via same connection to etcd?
+3. Get the whole tree/dir listing when a watched dir (`recursive=true`) updates instead of having to run a `find()` [like this](https://github.com/srinivasmohan/reconfig/blob/master/lib/worker.rb#L32)
+4. Cleanup the `onetime` and init mode runs.
+
 
