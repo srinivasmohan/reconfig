@@ -3,25 +3,25 @@ require "etcd"
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 require "utils.rb"
 require "config.rb"
+require "render.rb"
 
 module Reconfig
   class Worker
     include EM::Deferrable
 
     def initialize(opts=Hash.new)
+      @opts=Hash.new
       #$stderr.puts "INIT: "+JSON.pretty_generate(opts)
+			%w{key id source target reloadcmd checkcmd client}.each do |x|
+        @opts[x]=opts[x]
+      end
+      %w{recursive debug notreally onetime}.each do |x|
+        @opts[x]=opts.has_key?(x) && opts[x] ? true: false
+      end
       @key=opts["key"]
-      @id=opts["id"]
       @ckey=opts["id"] + "(Key: #{@key})"
-      @src=opts["source"]
-      @tgt=opts["target"]
-      @mode=opts["recursive"]
-      @reload=opts["reloadcmd"]
-      @check=opts["checkcmd"] 
       @client=opts["client"] 
       @debug=opts["debug"] 
-      @nr=opts.has_key?("notreally") && opts["notreally"] ? true : false 
-      @onetime=opts.has_key?("onetime") && opts["onetime"] ? true : false  
     end
 
     def debug!
@@ -47,26 +47,26 @@ module Reconfig
       rethash
     end
 
-    #Hmmm... If we are watching a tree recursively, how can we get back a list of keys/values without having to fetch it?
+    #Hmmm... If we are watching an etcd dir recursively, how can we get back a list of keys/values without having to fetch it?
     def run
-      modedesc=@mode ? "Recursive(Tree)": "SingleKey(Leaf)"
-      logmsg("#{@ckey} - Watching #{@key} (#{modedesc})- Change #{@tgt} using #{@src}")
+      logmsg("#{@ckey} - Watching #{@key} (#{ @opts["recursive"] ? "Recursive(Tree)": "SingleKey(Leaf)" })")
       loop do 
         begin
           val=nil
-          if !@onetime
-       	    obj=@client.watch(@key, recursive: @mode)
+          if !@opts["onetime"]
+       	    obj=@client.watch(@key, recursive: @opts["recursive"])
             logmsg("Key #{@key} changed #{obj}")
-            val=find(@key,@mode)
+            val=find(@key,@opts["recursive"])
           else
-            val=find(@key,@mode) 
+            val=find(@key,@opts["recursive"])
           end
           logmsg("Key #{@key} contains #{val}")
+          #renderer=Reconfig::Render.new(@src, @tgt, val)
         rescue Exception => e
           logmsg("#{@ckey} - Connectivity error to #{@host}:#{@port} - #{e.inspect}")
-          sleep 30
+          sleep 15
         end 
-        break if @onetime
+        break if @opts["onetime"]
       end    
     end
   end #end of Worker
