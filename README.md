@@ -30,6 +30,16 @@ cd reconfig
 bundle install
 ```
 
+### Etcd installation ###
+
+Pick up an etcd release from [Etcd GH release page](https://github.com/coreos/etcd/releases) and install (gunzip, cp and chmod).
+
+### Etcd in production ###
+
+You may want to lock this down to specific allowed security groups / IP blocks. Also a good idea to use SSL and client authentication via SSL.
+
+See [Reading and writing over HTTPS](https://github.com/coreos/etcd/blob/master/Documentation/security.md) for details on how to setup etcd in SSL mode.
+
 ## Command line opts ##
 
 ```
