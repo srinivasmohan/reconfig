@@ -37,14 +37,14 @@ module Reconfig
     attr_accessor :debug
 
     def initialize(opts={})
-			@cfgdir=opts[:cfgdir]
-			@debug=opts[:debug] ? opts[:debug] : false
+      @cfgdir=opts[:cfgdir]
+      @debug=opts[:debug] ? opts[:debug] : false
       @confdir=@cfgdir +"/conf.d"
       @templatedir=@cfgdir+"/templates"
       @prefix=opts[:prefix] || nil #Will be prefixed to etcd keys to watch for.
-			dirs=[@cfgdir, @confdir, @templatedir]
+      dirs=[@cfgdir, @confdir, @templatedir]
       logmsg("Starting with ConfigDir=#{@cfgdir} Debug=#{@debug}" + (@prefix.nil? ? "": " Prefix=#{@prefix}"))
-			abort "Missing config dirs #{dirs.join(" ")}" unless checkdirs(dirs)
+      abort "Missing config dirs #{dirs.join(" ")}" unless checkdirs(dirs)
       @configs=Hash.new
       @targets=Hash.new
       @notreally=opts[:notreally] ? true : false
@@ -65,7 +65,7 @@ module Reconfig
       @host=opts[:host]
       @port=opts[:port]
       #If provided a DNS SRV record, then use that to locate a valid host:port combo for etcd.
-			@connectparams={}
+      @connectparams={}
       @connectparams.merge!({
         :use_ssl => opts[:ssl],
         :ca_file => opts[:ssl_cafile],
@@ -76,15 +76,15 @@ module Reconfig
     end
 
     def checkdirs(dirs=Array.new)
-     y=true
-     dirs.each { |x| y&&=File.directory?(x) }
-     y
+      y=true
+      dirs.each { |x| y&&=File.directory?(x) }
+      y
     end
 
-		def parsecfg(f=nil)
+    def parsecfg(f=nil)
       return {:err => "Nil config"} if f.nil?
       return {:err => "Missing config file"} unless File.exists?(f)
-     	begin
+      begin
        obj=JSON.parse(File.read(f))
        obj.merge!({"id" => f}) unless obj.has_key?("id")
        return {:obj => obj}
@@ -92,7 +92,7 @@ module Reconfig
        logmsg("Error reading #{f} - #{e.inspect}")
        return {:err => e.inspect }
       end 
-		end
+    end
 
     def validateCfg(cfgs=Array.new)
       return [] unless cfgs.is_a?(Array)
@@ -117,10 +117,10 @@ module Reconfig
       %w{source target key}.each {|x| return false unless h.has_key?(x)}
       return false unless File.exists?(@templatedir+"/"+h["source"])
       return false unless h["key"]=~/^\//
-			if @targets.has_key?(h["target"])
-				logmsg("Ignoring #{h["id"]} since it REPEATS target config #{h["target"]}")
-				return false
-			end
+      if @targets.has_key?(h["target"])
+        logmsg("Ignoring #{h["id"]} since it REPEATS target config #{h["target"]}")
+        return false
+      end
       h["source"]=@templatedir + "/" + h["source"]
       h["key"]=@prefix + h["key"] unless @prefix.nil?
       h["key"].squeeze!("/")
@@ -139,7 +139,7 @@ module Reconfig
       return true 
     end
 
-	  def locatecfgs
+    def locatecfgs
       Dir.glob("#{@confdir}/*.json").sort.map { |f| File.expand_path(f)}
     end
 
@@ -157,7 +157,7 @@ module Reconfig
     def client
       client=nil
       chash={:host => @host, :port => @port }
-			unless @srv.nil?
+      unless @srv.nil?
         chash[:host], chash[:port] = getHostInfo
         abort "Etcd host/port was null from SRV record #{@srv}!"
         logmsg("Etcd host #{chash[:host]}:#{chash[:port]} from SRV #{@srv}") if @debug
@@ -185,7 +185,5 @@ module Reconfig
 
   end #end of Config class
 
-  class Reactor
 
-  end
 end #end of module

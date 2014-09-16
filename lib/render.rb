@@ -19,7 +19,7 @@ module Reconfig
     end
 
     def process
-			return false unless @opts.keys.length > 0
+      return false unless @opts.keys.length > 0
       newcontents=populate_template
       #p newcontents
       return false if newcontents=='RECONFIG-ERR'
