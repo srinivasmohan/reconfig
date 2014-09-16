@@ -4,3 +4,5 @@ gem 'json'
 gem 'uuid'
 gem 'etcd'
 gem 'mixlib-cli'
+gem 'eventmachine'
+
