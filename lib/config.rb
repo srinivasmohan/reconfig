@@ -16,7 +16,7 @@ module Reconfig
     include Mixlib::CLI
     option :help, :short =>'-h', :long => '--help', :boolean => true, :default => false, :description => "Show this Help message.", :show_options => true, :exit => 0
     option :host, :long => "--host ETCDHOST", :default => "127.0.0.1", :description => "Etcd host to connect to. Default: 127.0.0.1"
-    option :port, :long => "--port PORT", :default => 4001, :description => "Etc port. Default: 4001"
+    option :port, :long => "--port PORT", :default => 4001, :description => "Etcd port. Default: 4001"
     option :prefix, :short => "-p someprefix", :long => "--prefix someprefix", :default => nil, :description => "Key prefix to use. Must begin with '/'. Default: empty"
     option :debug, :short => "-d", :long => "--debug", :boolean => true, :default => false, :description => "Enable debug mode."
     option :onetime, :short => "-o", :long => "--onetime", :boolean => true, :default => false, :description => "Run onetime and exit"
