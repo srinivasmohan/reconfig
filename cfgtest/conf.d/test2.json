@@ -1,0 +1,7 @@
+{
+"id": "test2",
+"source": "test2.conf.erb",
+"target": "/tmp/test2.conf",
+"key": "/test2",
+"recursive": false
+}
