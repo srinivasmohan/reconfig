@@ -21,3 +21,15 @@ unless cli.config[:prefix].nil?
 end
 recfg=Reconfig::Config.new(cli.config)
 recfg.connect
+
+EM.run {
+  recfg.configs.keys.each do |thiskey|
+
+
+  end 
+
+  reaper = Proc.new { logmsg("Exiting!"); EM.stop  }
+  Signal.trap "TERM", reaper
+  Signal.trap "INT", reaper
+  Signal.trap "USR1", Proc.new { recfg.debug! }
+}
