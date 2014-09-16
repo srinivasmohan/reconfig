@@ -23,7 +23,7 @@ module Reconfig
       option :ssl_cafile, :long => "--ssl_cafile PATH-TO-CA-FILE", :default => nil, :description => "Path to SSL CA (cert auth) file"
       option :ssl_cert , :long => "--ssl_cert PATH-TO-SSL-CERT", :default => nil, :description => "Path to SSL cert"
       option :ssl_key, :long => "--ssl_key PATH-TO-SSL-KEY", :default => nil, :description => "Path to SSL Key"
-      option :ssl_passphrase, :long => "--ssl_passphrase SSL-Keys-Passphrase", :default => nil, :description => "Passphrase if SSL Key is encrypted"
+      option :ssl_passphrase, :long => "--ssl_passphrase Passphrase", :default => nil, :description => "Passphrase if SSL Key is encrypted"
       option :version, :long => "--version", :boolean => true, :default => false, :description => "Connect to etcd and dump version/leader info etc"
       option :srv, :long => "--srv SRV-RECORD", :default => nil, :description => "Use DNS SRV record to locate the etcd host/port. If specified, overrides host/port"
     end #End of class.
