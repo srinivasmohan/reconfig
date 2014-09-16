@@ -1,1 +1,3 @@
-<% @rconf.to_yaml %>
+<% @reconfigdata.keys.sort.each do |x| %>
+KEY <%= x %> has VALUE <%= @reconfigdata[x] %>
+<% end %>
