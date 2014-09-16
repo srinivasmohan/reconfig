@@ -35,8 +35,8 @@ module Reconfig
 
   class Config
 
-    attr_reader :cfgdir, :configs, :confdir, :templatedir, :client
-    attr_accessor :debug
+    attr_reader :cfgdir, :configs, :confdir, :templatedir, :targets
+    attr_accessor :debug, :client
 
     def initialize(opts={})
 			@cfgdir=opts[:cfgdir]
@@ -47,16 +47,17 @@ module Reconfig
 			dirs=[@cfgdir, @confdir, @templatedir]
       logmsg("Starting with ConfigDir=#{@cfgdir} Debug=#{@debug}" + (@prefix.nil? ? "": " Prefix=#{@prefix}"))
 			abort "Missing config dirs #{dirs.join(" ")}" unless checkdirs(dirs)
-      @configs=Array.new 
+      @configs=Hash.new
       @targets=Hash.new
+      cfgs=[]
       locatecfgs.each do |thiscfg|
         c=parsecfg(thiscfg)
        	logmsg("Could not process #{thiscfg} - #{c[:err]}") if c[:err]
-        @configs << c[:obj] if c[:obj]
+        cfgs << c[:obj] if c[:obj] 
       end
-      @configs=validatecfg(@configs)
-      puts "After: "+JSON.pretty_generate(@configs) if @debug
-      if @configs.length>0
+      validateCfg(cfgs) #populate @configs
+      $stderr.puts "ConfigHash: "+JSON.pretty_generate(@configs) if @debug
+      if @configs.keys.length>0
         logmsg("Targeting config files: "+@targets.keys.sort.join(" "))
       else
         logmsg("No valid configs to work with!")
@@ -100,7 +101,7 @@ module Reconfig
       end 
 		end
 
-    def validatecfg(cfgs=Array.new)
+    def validateCfg(cfgs=Array.new)
       return [] unless cfgs.is_a?(Array)
       #cfg is an array of hashes, each to have:
       #We expect hash to have 
@@ -108,15 +109,12 @@ module Reconfig
       # target => Target config
       # source => Source template. this will be sourced from @templatedir
       # id (optional)
-      cfgnew=[]
+      cfgnew=Hash.new
       cfgs.each do |t|
         if !checkobj(t)
           logmsg("Ignoring #{t["id"]} - This must have keys: source,target,key. Source(file) must exist in #{@templatedir} and Key must start with a /")
           next
         end 
-        t["key"]=@prefix+t["key"] unless @prefix.nil?
-				logmsg("Target #{t["target"]} bound to template:#{t["source"]}, key #{t["key"]}") if @debug
-        cfgnew << t            
       end
       cfgnew
     end
@@ -130,7 +128,17 @@ module Reconfig
 				logmsg("Ignoring #{h["id"]} since it REPEATS target config #{h["target"]}")
 				return false
 			end
+      h["key"]=@prefix + h["key"] unless @prefix.nil?
+      h["key"].squeeze!("/")
+      if @configs.has_key?( h["key"] )
+        logmsg("Ignoring #{h["id"]} since Etcd Key #{h["key"]} is already bound to item #{@configs[h["key"]]["id"]}")
+        return false
+      end
+      h["recursive"]=h.has_key?("recursive") && h["recursive"] ? true : false
+      @configs[ h["key"] ] = h
 			@targets[h["target"]]=h["id"]
+      desc=h["recursive"] ? "TREE" : "LEAF"
+      logmsg("TargetConfig #{h["target"]} bound to Key:#{h["key"]} (#{desc}) Template:#{h["source"]}") if @debug
       return true 
     end
 
@@ -174,6 +182,13 @@ module Reconfig
     	
     end
 
+    def debug!
+      @debug=!@debug
+      logmsg("Debug toggled to #{@debug}") 
+    end
   end #end of Config class
 
+  class Reactor
+
+  end
 end #end of module
