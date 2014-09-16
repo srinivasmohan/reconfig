@@ -1,0 +1,7 @@
+{
+"id": "test3_altpattern",
+"source": "test3.conf.erb",
+"target": "/tmp/test3.conf",
+"key": "/test3",
+"pattern": "#% %#"
+}
