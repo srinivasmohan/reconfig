@@ -50,6 +50,33 @@ module Reconfig
 	    rethash
     end
 
+    #Return an etcd client. Wont know if you can connect till you connect.
+    def etcdclient(opts=Hash.new)
+      client=nil
+      chash=Hash.new
+      %w{host port ssl_cafile ssl_cert ssl_key}.each {|x| chash[x.to_sym]=opts[x.to_sym] }
+      srv=opts[:srv] || nil
+      unless srv.nil?
+        logmsg("Fetching etcd host from SRV #{srv}") if opts[:debug]
+        chash[:host], chash[:port] = getHostInfo(srv)
+        abort "Etcd host/port was null from SRV record #{srv}!" if chash[:host].nil? || chash[:port].nil?
+      end
+      logmsg("Connecting to etcd host #{chash[:host]}:#{chash[:port]}") if opts[:debug]
+      if opts[:ssl]
+        #cafile/cert/key is provided MUST exist.
+        client=Etcd.client host: chash[:host], port: chash[:port] do |clt|
+          clt.use_ssl = true
+          clt.ca_file = chash[:ssl_cafile]
+          clt.ssl_cert = chash[:ssl_cert].nil? ? nil: OpenSSL::X509::Certificate.new(File.read(chash[:ssl_cert]))
+          clt.ssl_key = chash[:ssl_key].nil? ? nil: OpenSSL::PKey::RSA.new(File.read(chash[:ssl_key]), opts[:ssl_passphrase])
+        end
+      else
+       client=Etcd.client(chash)
+      end
+      return client
+    end
+
+    
 
   end #End of module
 end
