@@ -4,6 +4,7 @@ $LOAD_PATH.unshift(File.dirname(__FILE__))
 require "utils.rb"
 require "config.rb"
 require "render.rb"
+require "mixlib/shellout"
 
 module Reconfig
   class Worker
@@ -12,10 +13,10 @@ module Reconfig
     def initialize(opts=Hash.new)
       @opts=Hash.new
       #$stderr.puts "INIT: "+JSON.pretty_generate(opts)
-			%w{splay key id source target reloadcmd checkcmd client pattern}.each do |x|
+			%w{key id source target reloadcmd checkcmd client pattern}.each do |x|
         @opts[x]=opts[x]
       end
-      @opts["splay"]=@opts.has_key?("splay") ? @opts["splay"].to_i : rand(10)+1 #Time to wait before reloading svc.
+      @opts["splay"]=opts.has_key?("splay") ? rand(opts["splay"].to_i)+1 : rand(10)+1 #Time to wait before reloading svc.
       %w{recursive debug notreally onetime}.each do |x|
         @opts[x]=opts.has_key?(x) && opts[x] ? true: false
       end
@@ -27,6 +28,27 @@ module Reconfig
 
     def debug!
       @debug=!@debug
+    end
+
+    def shellcmd(cmdstr)
+      stat=false
+      cmd=Mixlib::ShellOut.new(cmdstr)
+      begin
+        cmd.run_command
+        if cmd.error!.nil?
+          stat=true
+        else
+          $stderr.puts "#{cmdstr} errors:\n#{cmd.error!}"
+        end
+        if @debug
+          logmsg("#{@ckey}: Ran [#{cmdstr}]")
+          $stderr.puts "#{@ckey}: STDOUT #{cmd.stdout}"
+          $stderr.puts "#{@ckey}: STDERR #{cmd.stderr}"
+        end
+      rescue Exception => e
+        logmsg("Failed to run #{cmdstr} - #{e.inspect}")
+      end
+      return stat
     end
 
     #This stupidity to fetch a full tree when a recursive watch triggers.
@@ -63,7 +85,20 @@ module Reconfig
           end
           logmsg("Key #{@key} contains #{val}") if @debug
           renderer=Reconfig::Render.new(@opts.dup, val)
-          logmsg("#{@ckey} - Updating #{@opts["target"]} - #{renderer.process}")
+          filechanged=renderer.process
+          if filechanged
+            logmsg("#{@ckey} - Target config #{@opts["target"]} modified.")
+            unless @opts["reloadcmd"].nil?
+              checkstatus=@opts["checkcmd"].nil? ? true : shellcmd( @opts["checkcmd"] )
+              if checkstatus
+                logmsg("#{@ckey}: Will restart via [#{@opts["reloadcmd"]}] in #{@opts["splay"]} secs")
+                sleep @opts["splay"]
+                shellcmd(@opts["reloadcmd"])
+              else
+                logmsg("#{@ckey} - Check [#{@opts["checkcmd"]}] failed! Skipping restart!")
+              end
+            end     
+          end
         rescue Exception => e
           logmsg("#{@ckey} - Connectivity error to #{@host}:#{@port} - #{e.inspect}")
           sleep 15

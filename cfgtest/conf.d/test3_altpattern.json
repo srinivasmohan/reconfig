@@ -3,5 +3,7 @@
 "source": "test3.conf.erb",
 "target": "/tmp/test3.conf",
 "key": "/test3",
-"pattern": "#% %#"
+"pattern": "#% %#",
+"checkcmd": "/tmp/1.sh",
+"reloadcmd": "/tmp/2.sh"
 }
