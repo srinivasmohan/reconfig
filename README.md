@@ -148,6 +148,12 @@ root@ubuntu-kafka:~/Git/reconfig# ./etcd-util.rb -k /abc/missing
 Etcd::KeyNotFound /abc/missing
 ```
 
+## Variables you can access in the template ##
+
+* `@reconfig` is a hash with keys `["data", "altdata", "watched"]`
+* `@reconfig["data"]` - This hash gets populated with value based on the `key` you specified in config json.
+* `@reconfig["altdata"]` - This hash gets populated with values based on keys you specified in `altkeys` param.
+* `@reconfig["watched"]` - This string is set the full path of the "watched" etcd key i.e. `key` from your config json.
 
 ## Setup ##
 
@@ -160,11 +166,37 @@ Two ways to do it:
 1. The `etcd` key is a directory - And you want to pull the entire "tree" (i.e. `recursive=true`)
 2. The `etcd` key being watched is a "file" - You just want its value.
 
+## Configuration ##
+
+### Config locations ###
+
+By default, Reconfig will expect folder `/etc/reconfig` with folders `/etc/reconfig/conf.d` and `/etc/reconfig/templates`. You can override this by setting `--cfgdir` to an alternate path at runtime. I will assume you use `/etc/reconfig` in the examples.
+
+* `/etc/reconfig/conf.d` - This will contain a JSON config file for reconfig for each etcd-key/target-conf-file combination.
+* `/etc/reconfig/templates` - The `source` parameter specified in config json will map to a template file in this folder.
+
+
+All config params in JSON:
+
+* `id` - Set this to whatever makes sense to you. Its only used for logging and will be set to the path of the config.json if unspecified.
+* `key` - Etcd key to watch.
+* `source` - The template to use to render the final config file. Expected to be present in `/etc/reconfig/templates`
+* `target` - The path to the config file Reconfig will generate when etcd key changes.
+* `recursive` - Set to `true` if you want to watch a etcd directory (recursively)
+* `pattern` - By default Reconfig will use erubis embedded patteen `<% %>` for your template files. Set a different pattern as needed.
+* `altkeys` - Use this to fetch values from other etcd keys when the main key changes.
+* `reloadcmd` - Command to use to (optionally) restart a service when the config file gets updated. 
+* `checkcmd` - Use this to verify if generated config is valid (e.g. `varnishd -C -f /etc/varnish/default.vcl` for varnish if default.vcl was changed). This command must exit with a status `0` or else `reloadcmd` will be skipped. Matters only when `reloadcmd` is set.
+
+## Sample configs ##
+
+See [cfgtest/conf.d/](cfgtest/conf.d) and [cfgtest/templates](cfgtest/templates) for all examples.
 
 Folder [./cfgtest/conf.d](cfgtest/conf.d) has a couple of sample JSON configs.
 
-e.g. `test1.json` has:
+### Simple ###
 
+Config file `/etc/reconfig/test1.json`:
 ```json
 {
 "id": "test1",
@@ -175,26 +207,89 @@ e.g. `test1.json` has:
 }
 ```
 
-The above is just for illustration, but in a real setup, you would also have -
-* `checkcmd` - The command to be run to validate your config (e.g. `varnishd -C -f /etc/varnish/default.vcl`)
-* `reloadcmd` - The command to run if `checkcmd` returns OK e.g. `service varnish reload`
-* `pattern` - The default erubis pattern for templates is `<% %>`. Supply alternate pattern e.g. `#% %#` as needed (e.g. [cfgtest/conf.d/test3_altpattern.json](cfgtest/conf.d/test3_altpattern.json) ) - This would be handly when used in conjunction with Chef.
 
-And the template corresponding to it is [test1.conf.erb](cfgtest/templates/test1.conf.erb)
+And the template `/etc/reconfig/templates/test1.conf.erb` is:
 
 ```erb
-<% @reconfigdata.keys.sort.each do |x| %>
-KEY <%= x %> has VALUE <%= @reconfigdata[x] %>
+<% @reconfig["data"].keys.sort.each do |x| %>
+KEY <%= x %> has VALUE <%= @reconfig["data"][x] %>
 <% end %>
 ```
 
-`@reconfigdata` will always be a Hash.
+### You already use Chef/some-other solution and built config from a template already ###
 
+By default, reconfig will assume that the embedded pattern in templates is `<% %>` (standard erubis pattern). However there may be scenarios where you want to use a different pattern, in this case, you can provide an additional param `pattern` in your reconfig config json and change your template to use that.
+
+Sample config `/etc/reconfig/conf.d/test3_altpattern` is:
+```json
+{
+"id": "test3_altpattern",
+"source": "test3.conf.erb",
+"target": "/tmp/test3.conf",
+"key": "/test3",
+"pattern": "#% %#",
+"checkcmd": "/tmp/1.sh",
+"reloadcmd": "/tmp/2.sh"
+}
+```
+
+And your `/etc/reconfig/templates/test3.conf.erb` would look like this (Using `#% %#`):
+
+```erb
+#% @reconfig["data"].keys.each do |x| %#
+Using alternate pattern, Key #%= x %# => #%= @reconfig["data"][x] %#
+#% end %#
+```
+
+### You want to pull values from additional keys into your config as well ###
+
+Pretty simple. Use `altkeys` in your reconfig json config.
+Example: You want to watch etcd key `/test4` for changes and rebuild target config `/tmp/test4.conf` when it changes. However you also want to pull in the values from other etcd keys `/altkey1` and `/altkey2` into your target config file.
+
+In this case, `/etc/reconfig/conf.d/test4.json` would look like:
+```json
+{
+    "altkeys": {
+        "akey1": "/altkey1",
+        "akey2": "/altkey2"
+    },
+    "id": "test4_altkey",
+    "key": "/test4",
+    "recursive": false,
+    "source": "test4.conf.erb",
+    "target": "/tmp/test4.conf"
+}
+```
+
+And a sample template `/etc/reconfig/templates/test4.conf.erb`:
+```erb
+This config uses 'altkeys' too. Using altkeys param, you can pull in values from other etcd keys into your config as well.
+(The keys in altkeys are not watched for changed but rather fetched as-is whenever the main key changes)
+
+The main key we watched for was "<%= @reconfig["watched"] %>".
+
+Data based on main key (This key was being watched for changes):
+<% @reconfig["data"].keys.each do |x| %>
+KEY=<%= x %> VAL=<%= @reconfig["data"][x] %>
+<% end %>
+
+Data based on altkeys section (These are not watched but instead fetched from etcd whenever main key changes)
+<% @reconfig["altdata"].keys.each do |thiskey| %>
+Altkey=<%= thiskey %> - This points to a hash:
+<%= JSON.pretty_generate(@reconfig["altdata"][thiskey]) %>
+---
+
+<% end %>
+---
+
+<% end %>
+
+```
 ## Certain "design" assumptions ##
 
 1. The same target config file cannot be monitored under multiple etcd keys.
 2. The same etcd key cannot be monitored for multiple targets.
-
+3. If you are watching a stub key (`recursive: false`) and it expires (etcd TTL), then its watcher will leave target config unchanged.
 Basically - You cannot have a duplicate `key` or a `target` on a given system. That work for me now - Open to changing that if theres a need for it. Wanted to keep it simple for starters...
 
 ## TODO ##
