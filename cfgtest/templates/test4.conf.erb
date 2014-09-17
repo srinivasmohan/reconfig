@@ -1,0 +1,17 @@
+This config uses 'altkeys' too. Using altkeys param, you can pull in values from other etcd keys into your config as well.
+(The keys in altkeys are not watched for changed but rather fetched as-is whenever the main key changes)
+
+The main key we watched for was "<%= @reconfig["watched"] %>".
+
+Data based on main key (This key was being watched for changes):
+<% @reconfig["data"].keys.each do |x| %>
+KEY=<%= x %> VAL=<%= @reconfig["data"][x] %>
+<% end %>
+
+Data based on altkeys section (These are not watched but instead fetched from etcd whenever main key changes)
+<% @reconfig["altdata"].keys.each do |thiskey| %>
+Altkey=<%= thiskey %> - This points to a hash:
+<%= JSON.pretty_generate(@reconfig["altdata"][thiskey]) %>
+---
+
+<% end %>
