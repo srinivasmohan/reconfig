@@ -24,6 +24,7 @@ module Reconfig
       @ckey=opts["id"] + " [Key #{@key}]"
       @client=opts["client"] 
       @debug=opts["debug"] 
+      @altkeys=opts.has_key?("altkeys") ? opts["altkeys"] : {} 
     end
 
     def debug!
@@ -74,6 +75,7 @@ module Reconfig
     def run
       logmsg("#{@ckey} - [#{ @opts["recursive"] ? "Recursive/Tree": "SingleKey/Leaf" }]")
       loop do 
+        ifError=false
         begin
           val=nil
           if !@opts["onetime"]
@@ -83,8 +85,21 @@ module Reconfig
           else
             val=find(@key,@opts["recursive"])
           end
+          altval=Hash.new
+          if @altkeys.keys.length>0
+            @altkeys.keys.each do |thisid|
+             thiskey=@altkeys[thisid]
+             logmsg("#{@ckey} - Fetching altkey #{thisid}:#{thiskey}") if @debug
+             altval[thisid]=Hash.new
+             begin
+               altval[thisid]=find(thiskey, true) #full tree i.e. recursive mode 
+             rescue Etcd::KeyNotFound => nosuchkey
+               logmsg("#{@ckey} - Alternate key #{nosuchkey.cause} missing on etcd")
+             end
+            end 
+          end
           logmsg("Key #{@key} contains #{val}") if @debug
-          renderer=Reconfig::Render.new(@opts.dup, val)
+          renderer=Reconfig::Render.new(@opts.dup, val, altval, @key)
           filechanged=renderer.process
           if filechanged
             logmsg("#{@ckey} - Target config #{@opts["target"]} modified.")
@@ -95,13 +110,18 @@ module Reconfig
                 sleep @opts["splay"]
                 shellcmd(@opts["reloadcmd"])
               else
-                logmsg("#{@ckey} - Check [#{@opts["checkcmd"]}] failed! Skipping restart!")
+                logmsg("#{@ckey} - CheckCmd [#{@opts["checkcmd"]}] failed! Skipping restart!")
               end
             end     
           end
+        rescue Etcd::KeyNotFound => ke
+          logmsg("#{@ckey} - Etcd KeyNotFound - #{ke.cause}")
+          ifError=true
         rescue Exception => e
           logmsg("#{@ckey} - Connectivity error to #{@host}:#{@port} - #{e.inspect}")
-          sleep 15
+          ifError=true
+        ensure 
+          sleep 5 if ifError 
         end 
         break if @opts["onetime"]
       end    

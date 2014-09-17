@@ -12,11 +12,15 @@ module Reconfig
 
   class Render
     #source is source template path
-    def initialize(opts=Hash.new, valhash=Hash.new)
-      @reconfigdata=valhash #In the template, all references to @reconfigdata
+    def initialize(opts=Hash.new, valhash=Hash.new, altvalhash=Hash.new, watchedkey=nil)
       @opts=opts
       @debug=@opts["debug"]
       @pattern=opts.has_key?("pattern") ? opts["pattern"] : '<% %>'
+      @reconfig={
+        'data' => valhash,
+        'altdata' => altvalhash.is_a?(Hash) ? altvalhash : {},
+        'watched' => watchedkey
+      }
     end
 
     def process
@@ -45,7 +49,9 @@ module Reconfig
     def populate_template
       begin
         template=Erubis::Eruby.new(File.read(@opts["source"]), :pattern => @pattern)
-     	  return template.result(binding)
+     	  #return template.result(binding)
+        return template.evaluate({:reconfig => @reconfig }) 
+        
       rescue Exception => e
         logmsg("Error processing template #{@opts["source"]} - #{e.inspect} #{e.backtrace}")
         return 'RECONFIG-ERR' 

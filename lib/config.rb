@@ -133,6 +133,16 @@ module Reconfig
       h["reloadcmd"]=h.has_key?("reloadcmd") ? h["reloadcmd"] : nil
       h["notreally"]=@notreally if @notreally
       h["pattern"]=h.has_key?("pattern") ? h["pattern"] : '<% %>'
+      if h.has_key?("altkeys") 
+        if !h["altkeys"].is_a?(Hash)
+          #altkeys is like {"otherkey1"=>"/key1", "otherkey2"=>"/key2"}
+          #These keys are not actively watched but whenever the main "key" (h.key) changes, values of altkeys will be pulled from etcd
+          # and stuck into @altkeydata["otherkey"] for use in the templates.
+          # @prefix is intentionally NOT prefixed to altkeys.
+          logmsg("Ignoring #{h["id"]} since 'altkeys' is not a Hash!")
+          return false 
+        end
+      end
       @configs[ h["key"] ] = h
       @targets[h["target"]]=h["id"]
       desc=h["recursive"] ? "TREE" : "LEAF"
