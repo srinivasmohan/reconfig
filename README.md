@@ -290,6 +290,7 @@ Altkey=<%= thiskey %> - This points to a hash:
 1. The same target config file cannot be monitored under multiple etcd keys.
 2. The same etcd key cannot be monitored for multiple targets.
 3. If you are watching a stub key (`recursive: false`) and it expires (etcd TTL), then its watcher will leave target config unchanged.
+
 Basically - You cannot have a duplicate `key` or a `target` on a given system. That work for me now - Open to changing that if theres a need for it. Wanted to keep it simple for starters...
 
 ## TODO ##
