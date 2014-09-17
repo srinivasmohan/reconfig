@@ -178,6 +178,7 @@ e.g. `test1.json` has:
 The above is just for illustration, but in a real setup, you would also have -
 * `checkcmd` - The command to be run to validate your config (e.g. `varnishd -C -f /etc/varnish/default.vcl`)
 * `reloadcmd` - The command to run if `checkcmd` returns OK e.g. `service varnish reload`
+* `pattern` - The default erubis pattern for templates is `<% %>`. Supply alternate pattern e.g. `#% %#` as needed (e.g. [cfgtest/conf.d/test3_altpattern.json](cfgtest/conf.d/test3_altpattern.json) ) - This would be handly when used in conjunction with Chef.
 
 And the template corresponding to it is [test1.conf.erb](cfgtest/templates/test1.conf.erb)
 
@@ -198,9 +199,8 @@ Basically - You cannot have a duplicate `key` or a `target` on a given system. T
 
 ## TODO ##
 
-1. Implement the `checkcmd` and `reloadcmd` functionality.
-2. Investigate if we can somehow watch many keys via same connection to etcd?
-3. Get the whole tree/dir listing when a watched dir (`recursive=true`) updates instead of having to run a `find()` [like this](https://github.com/srinivasmohan/reconfig/blob/master/lib/worker.rb#L32)
-4. Cleanup the `onetime` and init mode runs.
+1. Investigate if we can somehow watch many keys via same connection to etcd?
+2. Get the whole tree/dir listing when a watched dir (`recursive=true`) updates instead of having to run a `find()` [like this](https://github.com/srinivasmohan/reconfig/blob/master/lib/worker.rb#L32)
+3. Cleanup the `onetime` and init mode runs.
 
 
