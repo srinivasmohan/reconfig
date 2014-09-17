@@ -1,0 +1,11 @@
+{
+    "altkeys": {
+        "akey1": "/altkey1", 
+        "akey2": "/altkey2"
+    }, 
+    "id": "test4_altkey", 
+    "key": "/test4", 
+    "recursive": false, 
+    "source": "test4.conf.erb", 
+    "target": "/tmp/test4.conf"
+}
